@@ -11,6 +11,8 @@ v2 - Branch off main, Use remote workers on network to handoff calculations in b
 
 v3 - Use golangjs package to port it over from same code base to a pwa github hosted site
 
+v4 - Use a new algorithm based on going through each payment and see how a payment affects interest month by month. This way we dont have to generate any permutations. We are just working down the tree to the wealthiest branch.
+
 #### How to use
 
 Edit the loans.yaml file that has some examples and run it. The output will be the index array order of how to pay them off followed by the time in months and amount paid.
