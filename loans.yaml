@@ -1,0 +1,38 @@
+--- 
+extra: 10
+loans: 
+  - 
+    apy: 0.01
+    balance: 1000.00
+    min: 400.01
+    name: Furnace
+  - 
+    apy: 0.01
+    balance: 595.19
+    min: 198
+    name: Lowes
+  - 
+    apy: 0.01
+    balance: 1113.74
+    min: 100
+    name: Camera
+  - 
+    apy: 0
+    balance: 3456.60
+    min: 101.85
+    name: Windows
+  - 
+    apy: 0.0696
+    balance: 4175.29
+    min: 68.64
+    name: Nelnet
+  - 
+    apy: 0.0559
+    balance: 10941.08
+    min: 274.27
+    name: Elantra
+  - 
+    apy: 0.03875
+    balance: 121874.83
+    min: 400.52 #subtract escrow
+    name: Mortage
