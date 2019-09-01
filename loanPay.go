@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type loans struct {
+type loansStruct struct {
 	Extra float32 `yaml:"extra"`
 	Loans []struct {
 		Apy     float32 `yaml:"apy"`
@@ -22,47 +22,58 @@ type loans struct {
 		Min     float32 `yaml:"min"`
 		//Name    string  `yaml:"name"` // Dont need this right now yet
 	} `yaml:"loans"`
-	FastestMethod  loanResult
-	CheapestMethod loanResult
 }
 
-type loanResult struct {
+type result struct {
 	Order     []int
 	Months    int16
 	TotalPaid float32
 }
 
-var loanResults loans
-var canPay float32
-var jobs chan loanResult
+var loans loansStruct
+
+var jobLoan chan result
+var jobResults chan result
+var fastestResult result
+var cheapestResult result
+
+var threads = 8
 
 func main() {
 
-	var waitgroup sync.WaitGroup
-	jobs = make(chan loanResult, 100)
+	var wgp sync.WaitGroup // Permutation
+	var wgr sync.WaitGroup // Result
+	jobLoan = make(chan result, 10000)
+	jobResults = make(chan result, 4)
 
 	//Load the loans.yaml file
 	loadFile()
 
 	// This starts up 8 workers, initially blocked
 	// because there are no jobs yet.
-	for w := 1; w <= 8; w++ {
-		waitgroup.Add(1)
-		go worker(w, &waitgroup)
+	for w := 1; w <= threads; w++ {
+		wgp.Add(1)
+		go worker(w, &wgp)
 	}
+
+	//Start processing the results while we wait
+	go comparator(&wgr)
 
 	// Here we send `jobs` and then `close` that
 	// channel to indicate that's all the work we have.
 	//Generate possible combinations and add them to queue
-	permutation(rangeSlice(0, len(loanResults.Loans)))
-	close(jobs)
+	permutation(rangeSlice(0, len(loans.Loans)), &wgr)
 
 	// Finally we collect all the results of the work.
 	// This also ensures that the worker goroutines have
 	// finished.
-	waitgroup.Wait()
+	wgp.Wait()
+	wgr.Wait()
+	close(jobLoan)
+	close(jobResults)
 
-	fmt.Println(loanResults)
+	fmt.Println(fastestResult)
+	fmt.Println(cheapestResult)
 }
 
 func loadFile() {
@@ -73,19 +84,41 @@ func loadFile() {
 	defer file.Close()
 	b, err := ioutil.ReadAll(file)
 
-	err2 := yaml.Unmarshal([]byte(b), &loanResults)
+	err2 := yaml.Unmarshal([]byte(b), &loans)
 	if err2 != nil {
 		log.Fatal(err2)
 	}
 }
 
 func worker(id int, waitgroup *sync.WaitGroup) {
-	for j := range jobs {
+	for j := range jobLoan {
 		//fmt.Printf("Started job %v\n", j)
 		processLoanOrder(j)
 	}
 
 	waitgroup.Done()
+}
+
+func comparator(waitgroup *sync.WaitGroup) {
+	for loan := range jobResults {
+		if fastestResult.Months == 0 {
+			fastestResult = loan
+			cheapestResult = loan
+			fmt.Printf("Winner 0 (by default): %v\n", loan)
+		}
+
+		if fastestResult.Months >= loan.Months && fastestResult.TotalPaid > loan.TotalPaid {
+			fastestResult = loan
+			fmt.Printf("Replacement Fastest Winner: %v\n", loan)
+		}
+
+		if cheapestResult.TotalPaid > loan.TotalPaid && cheapestResult.Months >= loan.Months {
+			cheapestResult = loan
+			fmt.Printf("Replacement Cheapest Winner: %v\n", loan)
+		}
+
+		waitgroup.Done()
+	}
 }
 
 func rangeSlice(start, stop int) []int {
@@ -99,14 +132,14 @@ func rangeSlice(start, stop int) []int {
 	return xs
 }
 
-func permutation(xs []int) {
+func permutation(xs []int, waitgroup *sync.WaitGroup) {
 
 	var rc func([]int, int)
 	rc = func(a []int, k int) {
 		if k == len(a) {
-			loanorder := loanResult{}
-			loanorder.Order = append([]int{}, a...) // Important to keep order
-			jobs <- loanorder
+			// append is important to keep order of array
+			waitgroup.Add(1)
+			jobLoan <- result{Order: append([]int{}, a...)}
 		} else {
 			for i := k; i < len(xs); i++ {
 				a[k], a[i] = a[i], a[k]
@@ -118,19 +151,22 @@ func permutation(xs []int) {
 	rc(xs, 0)
 }
 
-func processLoanOrder(loan loanResult) {
+func processLoanOrder(loan result) {
 	var balances []float32
-	canPayExtra := loanResults.Extra
+	canPayExtra := loans.Extra
 
 	//Insert balances
 	for _, l := range loan.Order {
-		balances = append(balances, loanResults.Loans[l].Balance)
+		balances = append(balances, loans.Loans[l].Balance)
 	}
 
 	//fmt.Print("Balances: ")
 	//fmt.Println(balances)
 
 	for {
+		// One month has elapsed
+		loan.Months++
+
 		//reset the monthly extra payment counter
 		canPayMonth := canPayExtra
 
@@ -139,14 +175,14 @@ func processLoanOrder(loan loanResult) {
 
 		for _, l := range loan.Order {
 			if balances[l] == 0 {
-				canPayMonth += loanResults.Loans[l].Min //Rollover method
+				canPayMonth += loans.Loans[l].Min //Rollover method
 				//Complete loan
 				continue
 			}
 
 			//Make the minimum payment
-			balances[l] -= loanResults.Loans[l].Min
-			loan.TotalPaid += loanResults.Loans[l].Min
+			balances[l] -= loans.Loans[l].Min
+			loan.TotalPaid += loans.Loans[l].Min
 
 			// check if balance is overpaid
 			if balances[l] < 0 {
@@ -208,7 +244,7 @@ func processLoanOrder(loan loanResult) {
 				continue
 			}
 
-			interest := balances[l] * loanResults.Loans[l].Apy / 12
+			interest := balances[l] * loans.Loans[l].Apy / 12
 			interest = float32(math.RoundToEven(float64(interest)*100) / 100) // Bank round?
 			balances[l] += interest
 		}
@@ -216,15 +252,11 @@ func processLoanOrder(loan loanResult) {
 		// fmt.Printf("Balances after interest: ")
 		// fmt.Println(balances)
 
-		// One month has elapsed
-		loan.Months++
-
 		//If all balances are empty, we are done
 		var totalBalances float32
 		for _, bal := range balances {
 			totalBalances += bal
 		}
-		//fmt.Println(totalBalances)
 		if totalBalances == 0 {
 			break // We are done!!
 		}
@@ -235,18 +267,5 @@ func processLoanOrder(loan loanResult) {
 		}
 	}
 
-	if loanResults.FastestMethod.Months == 0 {
-		loanResults.FastestMethod = loan
-		loanResults.CheapestMethod = loan
-	}
-
-	//Was it the fastest then cheapest
-	if loanResults.FastestMethod.Months >= loan.Months && loanResults.FastestMethod.TotalPaid > loan.TotalPaid {
-		loanResults.FastestMethod = loan
-	}
-
-	//was it cheapest then fastest
-	if loanResults.CheapestMethod.TotalPaid >= loan.TotalPaid && loanResults.CheapestMethod.Months > loan.Months {
-		loanResults.CheapestMethod = loan
-	}
+	jobResults <- loan
 }
