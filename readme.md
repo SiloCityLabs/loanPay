@@ -15,7 +15,7 @@ v4 - Use a new algorithm based on going through each payment and see how a payme
 
 #### How to use
 
-Edit the loans.yaml file that has some examples and run it. The output will be the index array order of how to pay them off followed by the time in months and amount paid.
+Edit the loans.yaml file that has some examples and run it from command line. The output will be the index array order of how to pay them off followed by the time in months and amount paid.
 
 
 #### Benchmarks
