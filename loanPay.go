@@ -43,8 +43,8 @@ func main() {
 
 	var wgp sync.WaitGroup // Permutation
 	var wgr sync.WaitGroup // Result
-	jobLoan = make(chan result, 10000)
-	jobResults = make(chan result, 4)
+	jobLoan = make(chan result, 1000)
+	jobResults = make(chan result, 100)
 
 	//Load the loans.yaml file
 	loadFile()
@@ -69,7 +69,6 @@ func main() {
 	// finished.
 	wgp.Wait()
 	wgr.Wait()
-	close(jobLoan)
 	close(jobResults)
 
 	fmt.Println(fastestResult)
@@ -149,6 +148,8 @@ func permutation(xs []int, waitgroup *sync.WaitGroup) {
 		}
 	}
 	rc(xs, 0)
+
+	close(jobLoan)
 }
 
 func processLoanOrder(loan result) {
