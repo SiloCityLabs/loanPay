@@ -1,8 +1,14 @@
 --- 
+transfer: 
+  name: Chase
+  apy: 0.2574
+  fee: 0.04
+  available: 4940
+  term: 14
 extra: 10
 loans: 
   - 
-    apy: 0.01
+    apy: 0.00
     balance: 1000.00
     min: 400.01
     name: Furnace
