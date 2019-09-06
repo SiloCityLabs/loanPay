@@ -15,6 +15,13 @@ import (
 )
 
 type loansStruct struct {
+	Transfer struct {
+		Name      string  `yaml:"name"`
+		Apy       float32 `yaml:"apy"`
+		Fee       float32 `yaml:"fee"`
+		Term      int     `yaml:"term"`
+		Available float32 `yaml:"available"`
+	} `yaml:"transfer"`
 	Extra float32 `yaml:"extra"`
 	Loans []struct {
 		Apy     float32 `yaml:"apy"`
@@ -28,6 +35,13 @@ type result struct {
 	Order     []int
 	Months    int16
 	TotalPaid float32
+	Transfer  struct {
+		Did    bool
+		Loan   int16
+		When   int16
+		Amount float32
+		Saved  float32
+	}
 }
 
 var loans loansStruct
@@ -37,7 +51,7 @@ var jobResults chan result
 var fastestResult result
 var cheapestResult result
 
-var threads = 8
+var threads = 1
 
 func main() {
 
@@ -173,6 +187,73 @@ func processLoanOrder(loan result) {
 
 		// fmt.Printf("Balances after %v month(s): ", loan.Months)
 		// fmt.Println(balances)
+
+		// Check to see if a balance transfer is possible
+		if !loan.Transfer.Did {
+			for _, l := range loan.Order {
+				if balances[l] == 0 {
+					//skip, empty balance
+					continue
+				}
+
+				// Will we be able to pay this loan off before exiting zero interest?
+				if (balances[l] / float32(loans.Transfer.Term)) < (loans.Loans[l].Min + canPayExtra) {
+					totalTransfer := (balances[l] * loans.Transfer.Fee) + balances[l]
+
+					var totalNormal float32
+					thisBalance := balances[l]
+					fmt.Println(thisBalance)
+					for thisBalance != 0 {
+						thisBalance -= loans.Loans[l].Min
+						totalNormal += loans.Loans[l].Min
+
+						if thisBalance <= 0 {
+							//Done, readd leftover
+							totalNormal -= thisBalance
+							thisBalance = 0
+						} else {
+							//Calculate interest
+							thisBalance = (thisBalance * loans.Loans[l].Apy) + thisBalance
+							//Not even gonna round cuz this is theoreticall anyway
+						}
+
+						fmt.Println(thisBalance)
+					}
+
+					//Yeah!!!! we saved some cash, lets transfer this loan
+					if totalNormal > totalTransfer {
+						fmt.Printf("Can do transfer on %v, calculating for %v > %v\n", l, totalNormal, totalTransfer)
+
+						//Tell the user when and what we transfered
+						loan.Transfer.Did = true
+						loan.Transfer.Loan = int16(l)
+						loan.Transfer.When = loan.Months
+						loan.Transfer.Amount = balances[l]
+						loan.Transfer.Saved = totalNormal - totalTransfer
+						newMinimum := totalTransfer / float32(loans.Transfer.Term)
+						newMinimum = float32(math.RoundToEven(float64(newMinimum)*100) / 100)
+
+						//Current loan becomes new loan
+						balances[l] = totalTransfer
+
+						//We dont plan on paying interest
+						loans.Loans[l].Apy = 0.00
+
+						//if we cant pay using old minimum, take from canPayExtra
+						if newMinimum > loans.Loans[l].Min {
+							canPayExtra -= (newMinimum - loans.Loans[l].Min)
+							fmt.Printf("need more cash to pay\n")
+						}
+
+						//Figured out where the money comes from, set that shit
+						loans.Loans[l].Min = newMinimum
+
+						os.Exit(1)
+					}
+
+				}
+			}
+		}
 
 		for _, l := range loan.Order {
 			if balances[l] == 0 {
