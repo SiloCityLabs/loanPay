@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -43,8 +44,12 @@ func main() {
 	jobLoan = make(chan result, 1000)
 	jobResults = make(chan result, 100)
 
-	//Load the loans.yaml file
-	loadFile()
+	//Load the loans from whereever
+	if runtime.GOARCH == "wasm" {
+		loadLoansJS()
+	} else {
+		loadFile()
+	}
 
 	// This starts up 8 workers, initially blocked
 	// because there are no jobs yet.
