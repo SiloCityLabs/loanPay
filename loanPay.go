@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -37,6 +38,7 @@ var cheapestResult result
 var threads = 8
 
 func main() {
+	start := time.Now()
 
 	var wgp sync.WaitGroup // Permutation
 	var wgr sync.WaitGroup // Result
@@ -70,6 +72,8 @@ func main() {
 
 	fmt.Println(fastestResult)
 	fmt.Println(cheapestResult)
+
+	fmt.Println(time.Since(start))
 }
 
 func loadFile() {
@@ -101,6 +105,12 @@ func comparator(waitgroup *sync.WaitGroup) {
 			fastestResult = loan
 			cheapestResult = loan
 			fmt.Printf("Winner 0 (by default): %v\n", loan)
+		}
+
+		//eliminate emmediately, shaves about 0.5% of time
+		if (loan.Months > fastestResult.Months) || (loan.TotalPaid > fastestResult.TotalPaid) {
+			waitgroup.Done()
+			continue
 		}
 
 		if fastestResult.Months >= loan.Months && fastestResult.TotalPaid > loan.TotalPaid {
@@ -164,6 +174,14 @@ func processLoanOrder(loan result) {
 	for {
 		// One month has elapsed
 		loan.Months++
+
+		//This permutation already lost time or money, get out. 5% faster calculations with elimination check
+		if (fastestResult.Months != 0 && fastestResult.Months < loan.Months && fastestResult.TotalPaid < loan.TotalPaid) ||
+			(fastestResult.Months != 0 && cheapestResult.TotalPaid < loan.TotalPaid && cheapestResult.Months < loan.Months) {
+			loan.Months = 9999
+			loan.TotalPaid = 99999999999999999999999 //who is this rich? send me some money lol
+			break
+		}
 
 		//reset the monthly extra payment counter
 		canPayMonth := canPayExtra
@@ -261,7 +279,10 @@ func processLoanOrder(loan result) {
 
 		//Impossible payment plan, 50 years +
 		if loan.Months >= 600 {
-			return
+			//Need to send something to prevent deadlock
+			loan.Months = 9999
+			loan.TotalPaid = 99999999999999999999999
+			break
 		}
 	}
 

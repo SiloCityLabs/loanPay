@@ -11,8 +11,6 @@ v2 - Branch off main, Use remote workers on network to handoff calculations in b
 
 v3 - Use golangjs package to port it over from same code base to a pwa github hosted site
 
-v4 - Use a new algorithm based on going through each payment and see how a payment affects interest month by month. This way we dont have to generate any permutations. We are just working down the tree to the wealthiest branch.
-
 #### How to use
 
 Edit the loans.yaml file that has some examples and run it from command line. The output will be the index array order of how to pay them off followed by the time in months and amount paid.
@@ -22,27 +20,20 @@ Edit the loans.yaml file that has some examples and run it from command line. Th
 
 Loans | Permutations | Time To calculate
 -- | -- | --
-1  | 1 | 5ms
-2  | 2 | 5ms
-3  | 6 | 5ms
-4  | 24 | 5ms
-5  | 120 | 5ms
-6  | 720 | 5ms
-7  | 5,040 | 5ms
-8  | 40,320 | 5ms
-9  | 362,880 | 5ms
-10 | 3,628,800 | 7s
-11 | 39,916,800 | 75s
-12 | 479,001,600 | 15m
-13 | 6,227,020,800 | 4h
-14 | 87,178,291,200 | 46h
-15 | 1,307,674,368,000 | 28d
-16 | 20,922,789,888,000 | 1.25y
-17 | 355,687,428,096,000 | 21y
-18 | 6,402,373,705,728,000 | 382y
-19 | 121,645,100,408,832,000 | 7248y
-20 | 2,432,902,008,176,640,000 | 144952y
+1  | 1 | >1s
+2  | 2 | >1s
+3  | 6 | >1s
+4  | 24 | >1s
+5  | 120 | >1s
+6  | 720 | >1s
+7  | 5,040 | >1s
+8  | 40,320 | >1s
+9  | 362,880 | >1s
+10 | 3,628,800 | 4s
+11 | 39,916,800 | 48s
+12 | 479,001,600 | 10m
+13 | 6,227,020,800 | 2h
+14 | 87,178,291,200 | 2d
+15 | 1,307,674,368,000 | 219d
 
-Time to calculate was run on a machine with a 5147 [benchmark score](https://www.cpubenchmark.net/). Your times may vary. Average memory usage was 105MB of ram throughout the process.
-
-
+Time to calculate was run on a machine with Windows and a 11381 [benchmark score](https://www.cpubenchmark.net/). Your times may vary. Average memory usage was 6MB of ram throughout the process. Im workings towards achieving 14 loans in under 24 hours
