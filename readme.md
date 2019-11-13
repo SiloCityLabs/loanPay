@@ -36,4 +36,8 @@ Loans | Permutations | Time To calculate
 14 | 87,178,291,200 | 2d
 15 | 1,307,674,368,000 | 219d
 
-Time to calculate was run on a machine with Windows and a 11381 [benchmark score](https://www.cpubenchmark.net/). Your times may vary. Average memory usage was 6MB of ram throughout the process. Im workings towards achieving 14 loans in under 24 hours
+Time to calculate was run on a machine with Windows and a 11381 [benchmark score](https://www.cpubenchmark.net/). Your times may vary. Average memory usage was 6MB of ram throughout the process. 
+
+#### Closing notes
+
+Im workings towards achieving 14 loans in under 24 hours, by any means whether it be clustering, optimizations or anything else. The faster I can process all this data the better. It will also allow me to introduce better side ideas into it like balance transfers becouse ultimately thats just another loan I would be tossing into the mix of permutations.
